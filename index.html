@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P1-08 · 推文推送时间：上午 9 点 vs 晚上 20 点</title>
+    <style>
+        /* ================= 暗色模式变量体系 ================= */
+        :root {
+            /* 语义色（暗底优化版） */
+            --primary-blue: #4a9eff;
+            --primary-orange: #fbbf24;
+            --success-green: #34d399;
+            --warning-yellow: #3a2e12;
+            --warning-text: #fbbf24;
+
+            /* 暗色主题基础色 */
+            --bg-body: #0f1115;
+            --bg-card: #181b21;
+            --bg-subtle: #1f232b;
+            --bg-elevated: #232830;
+            --border-color: #2c313a;
+            --border-strong: #3a404a;
+
+            /* 文字色 */
+            --text-main: #e6e8eb;
+            --text-sub: #9aa0a6;
+            --text-dim: #6b7280;
+
+            /* 高亮背景（暗色适配） */
+            --blue-bg: #14243a;
+            --orange-bg: #2e2410;
+            --green-bg: #0e2a22;
+            --yellow-bg: #2a2110;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-body);
+            margin: 0;
+            padding: 20px;
+            color: var(--text-main);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            border-radius: 10px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+            padding: 24px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* ================= 头部信息 ================= */
+        .breadcrumb {
+            color: var(--text-dim);
+            font-size: 12px;
+            margin-bottom: 16px;
+        }
+
+        .header-card {
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0 0 12px 0;
+            color: var(--text-main);
+        }
+
+        .header-tags {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 12px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            background: var(--bg-elevated);
+            padding: 4px 10px;
+            border-radius: 4px;
+            color: var(--text-sub);
+            border: 1px solid var(--border-color);
+        }
+
+        .tag-green { color: var(--success-green); background: var(--green-bg); border-color: transparent; }
+        .tag-orange { color: var(--primary-orange); background: var(--orange-bg); border-color: transparent; }
+
+        .hypothesis {
+            color: var(--text-sub);
+            font-size: 13px;
+            margin: 0;
+        }
+
+        /* ================= 通用模块标题 ================= */
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 24px 0 12px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-main);
+        }
+
+        .section-title > span:first-child {
+            background: var(--primary-blue);
+            color: #0f1115;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .section-title .title-hint {
+            font-size: 12px;
+            font-weight: normal;
+            color: var(--text-dim);
+            background: none;
+            width: auto;
+            height: auto;
+            border-radius: 0;
+            display: inline;
+        }
+
+        /* ================= 模块1：A/B方案 ================= */
+        .ab-plans {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .plan-card {
+            flex: 1;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            background: var(--bg-subtle);
+        }
+
+        .plan-card.active-a { border-color: var(--primary-blue); background: var(--blue-bg); }
+        .plan-card.active-b { border-color: var(--primary-orange); background: var(--orange-bg); }
+
+        .plan-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .plan-tag-a { color: #0f1115; background: var(--primary-blue); padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+        .plan-tag-b { color: #0f1115; background: var(--primary-orange); padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+
+        .phone-mockup {
+            background: var(--bg-elevated);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            margin-bottom: 12px;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .mockup-header { font-weight: bold; font-size: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; color: var(--text-main); }
+        .mockup-item { background: var(--bg-card); padding: 8px; border-radius: 4px; font-size: 11px; color: var(--text-sub); border: 1px solid var(--border-color); }
+        .mockup-item strong { color: var(--text-main); }
+
+        .plan-desc { font-size: 12px; color: var(--text-sub); line-height: 1.6; }
+
+        /* ================= 模块2：实时实验数据 ================= */
+        .data-card {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            background: var(--bg-subtle);
+        }
+
+        .warning-banner {
+            background: var(--yellow-bg);
+            color: var(--warning-text);
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(251,191,36,0.2);
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+            background: var(--bg-card);
+            padding: 16px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .data-grid-item .label { font-size: 12px; color: var(--text-dim); margin-bottom: 6px; }
+        .data-grid-item .value { font-size: 18px; font-weight: 700; color: var(--text-main); font-variant-numeric: tabular-nums; }
+        .data-grid-item .sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+
+        .data-hint {
+            font-size: 12px;
+            color: var(--text-sub);
+            margin-top: 12px;
+            text-align: center;
+            line-height: 1.8;
+        }
+
+        .data-hint a { color: var(--primary-blue); text-decoration: none; }
+
+        /* ================= 按钮 ================= */
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-primary { background: var(--primary-blue); color: #0f1115; font-weight: 600; }
+        .btn-primary:hover { filter: brightness(1.1); }
+        .btn-outline { background: var(--bg-elevated); border-color: var(--border-strong); color: var(--text-main); }
+        .btn-outline:hover { background: var(--bg-subtle); border-color: var(--primary-blue); }
+        .btn-warning { background: var(--primary-orange); color: #0f1115; font-weight: 600; }
+        .btn-warning:hover { filter: brightness(1.1); }
+
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+        /* ================= 模块3：邀请同学答题 ================= */
+        .section-box {
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .invite-actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .link-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 13px;
+            color: var(--text-sub);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* ================= 模块4：数据收集 ================= */
+        .collect-area {
+            background: var(--bg-subtle);
+            border: 1px dashed var(--border-strong);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .collect-actions { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+
+        .data-input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .data-input-group textarea {
+            flex: 1;
+            height: 60px;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 12px;
+            resize: vertical;
+            background: var(--bg-card);
+            color: var(--text-sub);
+            outline: none;
+        }
+
+        .data-input-group textarea:focus { border-color: var(--primary-blue); }
+
+        .data-input-group button { height: 60px; padding: 0 20px; }
+
+        .collect-hint {
+            font-size: 12px;
+            color: var(--text-sub);
+            margin-top: 12px;
+            line-height: 1.7;
+        }
+
+        /* ================= 模块5：结论与解读 ================= */
+        .conclusion-card {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            background: var(--bg-subtle);
+        }
+
+        .conclusion-data-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 0;
+            text-align: center;
+            margin: 16px 0;
+            background: var(--bg-card);
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .conclusion-data-grid .col {
+            padding: 12px 8px;
+            border-right: 1px solid var(--border-color);
+        }
+        .conclusion-data-grid .col:last-child { border-right: none; }
+
+        .conclusion-data-grid .col-label { font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+        .conclusion-data-grid .col-value { font-weight: 700; font-size: 16px; color: var(--text-main); font-variant-numeric: tabular-nums; }
+        .conclusion-data-grid .col-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+
+        .chart-area {
+            display: flex;
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .chart-box {
+            flex: 1;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: var(--bg-card);
+        }
+
+        .chart-box-title { font-weight: 600; margin-bottom: 12px; color: var(--text-main); width: 100%; }
+
+        .donut-chart {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin: 16px 0;
+            transition: background 0.4s ease;
+        }
+
+        .donut-chart::after {
+            content: attr(data-center);
+            white-space: pre;
+            text-align: center;
+            width: 100px;
+            height: 100px;
+            background: var(--bg-card);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text-main);
+            line-height: 1.3;
+        }
+
+        .legend { display: flex; gap: 16px; font-size: 12px; flex-wrap: wrap; justify-content: center; }
+        .legend-item { display: flex; align-items: center; gap: 6px; color: var(--text-sub); }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        .prediction-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+        .prediction-table td { padding: 8px 0; border-bottom: 1px solid var(--border-color); }
+        .prediction-table tr:last-child td { border-bottom: none; }
+        .prediction-table td:first-child { color: var(--text-dim); width: 40%; }
+        .prediction-table td:last-child { color: var(--text-main); font-weight: 500; }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-pending { background: var(--yellow-bg); color: var(--warning-text); }
+        .badge-success { background: var(--green-bg); color: var(--success-green); }
+        .badge-blue { background: var(--blue-bg); color: var(--primary-blue); }
+
+        .business-reading {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 14px;
+            border-radius: 6px;
+            margin-top: 16px;
+            font-size: 13px;
+            line-height: 1.8;
+            color: var(--text-sub);
+        }
+
+        .business-reading strong { color: var(--text-main); }
+
+        /* ================= 底部导航 ================= */
+        .footer-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+            font-size: 13px;
+            color: var(--text-sub);
+        }
+
+        .footer-nav a { color: var(--primary-blue); text-decoration: none; }
+        .footer-nav a:hover { text-decoration: underline; }
+
+        .footer-copy {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-top: 24px;
+        }
+
+        /* ================= 模拟按钮 ================= */
+        .sim-bar {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 12px;
+        }
+
+        /* ================= 响应式 ================= */
+        @media (max-width: 900px) {
+            .ab-plans { flex-direction: column; }
+            .chart-area { flex-direction: column; }
+            .data-grid, .conclusion-data-grid { grid-template-columns: repeat(3, 1fr); }
+            .conclusion-data-grid .col:nth-child(3n) { border-right: none; }
+            .conclusion-data-grid .col:nth-child(-n+3) { border-bottom: 1px solid var(--border-color); }
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .container { padding: 14px; }
+            .data-grid, .conclusion-data-grid { grid-template-columns: repeat(2, 1fr); }
+            .conclusion-data-grid .col:nth-child(2n) { border-right: none; }
+            .conclusion-data-grid .col:nth-child(3n) { border-right: 1px solid var(--border-color); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 顶部面包屑 -->
+    <div class="breadcrumb">首页概览 · 招生线上推广与新媒体内容营销 · P1-08</div>
+
+    <!-- 头部信息 -->
+    <div class="header-card">
+        <h1 class="header-title">P1-08 · 推文推送时间：上午 9 点 vs 晚上 20 点</h1>
+        <div class="header-tags">
+            <span class="tag tag-green">📈 公众号推文</span>
+            <span class="tag tag-green">📊 数据对比</span>
+            <span class="tag tag-green">⏱ 主指标：24小时阅读完成率 (%) ↑ 越高越好</span>
+            <span class="tag tag-orange">💡 建议样本量：486 / 组</span>
+        </div>
+        <p class="hypothesis">实验假设：晚间家长与学生共同在线时推送，阅读完成率更高。</p>
+    </div>
+
+    <!-- 模拟数据按钮 -->
+    <div class="sim-bar">
+        <button class="btn btn-warning" onclick="simulateDataUpdate()">🎲 重新模拟一组随机数据</button>
+    </div>
+
+    <!-- 模块1：A/B方案 -->
+    <div class="section-title"><span>1</span> A / B 两版方案 <span class="title-hint">（点击选择你认为会胜出的一版）</span></div>
+    <div class="ab-plans">
+        <div class="plan-card active-a" id="planA" onclick="selectPlan('A')">
+            <div class="plan-header">
+                <span>方案 A</span>
+                <span class="plan-tag-a">上午 09:00</span>
+            </div>
+            <div class="phone-mockup">
+                <div class="mockup-header">通知中心</div>
+                <div class="mockup-item">📢 2024届校招启动宣讲会：30个专业/岗位...</div>
+                <div class="mockup-item">📢 优选好房推荐...</div>
+                <div class="mockup-item">📢 课程提醒：...</div>
+            </div>
+            <div class="plan-desc">工作日上午，上课/上班的碎片化时间，适合碎片化阅读。</div>
+        </div>
+
+        <div class="plan-card" id="planB" onclick="selectPlan('B')">
+            <div class="plan-header">
+                <span>方案 B</span>
+                <span class="plan-tag-b">晚上 20:00</span>
+            </div>
+            <div class="phone-mockup">
+                <div class="mockup-header">通知中心</div>
+                <div class="mockup-item">📢 2024届校招启动宣讲会：30个专业/岗位...</div>
+                <div class="mockup-item">📢 优选好房推荐...</div>
+                <div class="mockup-item">📢 课程提醒：...</div>
+            </div>
+            <div class="plan-desc">晚间与家长共同决策，决策者（家长）在场，需要深度阅读与讨论。</div>
+        </div>
+    </div>
+
+    <!-- 模块2：实时实验数据 -->
+    <div class="section-title"><span>2</span> 实时实验数据 <span class="title-hint">样本只来自观察对象提交的答卷，随提交实时更新</span></div>
+    <div class="data-card">
+        <div class="warning-banner" id="dataBanner">
+            ⏳ 数据收集中，样本量不足，需继续收集
+        </div>
+        <div class="data-grid">
+            <div class="data-grid-item">
+                <div class="label">A 版实测</div>
+                <div class="value" id="d-a-rate">0 %</div>
+                <div class="sub" id="d-a-n">样本 0</div>
+            </div>
+            <div class="data-grid-item">
+                <div class="label">B 版实测</div>
+                <div class="value" id="d-b-rate">0 %</div>
+                <div class="sub" id="d-b-n">样本 0</div>
+            </div>
+            <div class="data-grid-item">
+                <div class="label">差值 (B-A)</div>
+                <div class="value" id="d-diff">+0 %</div>
+                <div class="sub"></div>
+            </div>
+            <div class="data-grid-item">
+                <div class="label">相对提升</div>
+                <div class="value" id="d-rel">+0 %</div>
+                <div class="sub"></div>
+            </div>
+            <div class="data-grid-item">
+                <div class="label">P 值</div>
+                <div class="value" id="d-p">1</div>
+                <div class="sub">α≤0.05</div>
+            </div>
+            <div class="data-grid-item">
+                <div class="label">95% 置信区间</div>
+                <div class="value" id="d-ci">[0, 0]</div>
+                <div class="sub"></div>
+            </div>
+        </div>
+        <div class="data-hint" id="dataHint">
+            样本量进度（每组需 486 人，当前 A 0 / B 0）<br>
+            还没有任何样本。样本只能由观察对象真实提交答卷产生 —— 去 <a href="#">① 邀请同学答题</a> 分享链接，或点 <a href="#">④ 数据收集 → 去提交一份答卷</a>。
+        </div>
+    </div>
+
+    <!-- 模块3：邀请同学答题 -->
+    <div class="section-title"><span>3</span> 邀请同学答题 <span class="title-hint">分享链接 / 海报，同学填学号答题后即可产生样本</span></div>
+    <div class="section-box">
+        <p style="font-size:13px; color:var(--text-sub); margin:0 0 12px 0;">本组已收到 0 份答卷（普 A 0 · 普 B 0），样本不足，不能下结论 —— 每一份真实提交的答卷才算一个样本。同学答完卷自动汇入统计汇总，无需收集答卷，用设备交接的 .txt 答案文件拖入总页即可合并。</p>
+        <div class="invite-actions">
+            <button class="btn btn-outline">📋 复制邀请反馈按钮</button>
+            <button class="btn btn-primary">📝 生成 A/B 答题链接</button>
+            <button class="btn btn-outline">📋 生成答题二维码</button>
+            <button class="btn btn-outline">📋 复制测试链接</button>
+            <button class="btn btn-outline">📂 打开资源包</button>
+            <button class="btn btn-outline">📊 汇总统计分析 →</button>
+        </div>
+        <div class="link-box">
+            <span>答题链接：https://dx.ksj.top/</span>
+            <button class="btn btn-outline btn-sm" onclick="copyLink()">复制</button>
+        </div>
+    </div>
+
+    <!-- 模块4：数据收集 -->
+    <div class="section-title"><span>4</span> 数据收集 <span class="title-hint">查看本组收到的答卷 / 导入他人回传的数据码 / 清空重做</span></div>
+    <div class="collect-area">
+        <p style="font-size:13px; color:var(--text-sub); margin:0 0 8px 0;">当前 A/B 样本：<span id="collect-samples">0 / 0</span>（来自 <span id="collect-count">0</span> 份真实答卷），建议每组 486。</p>
+        <p style="font-size:13px; color:var(--text-sub); margin:0 0 12px 0;">还没有答卷。样本只能由观察对象真实提交答卷产生 —— 去 <a href="#" style="color:var(--primary-blue); text-decoration:none;">① 邀请同学答题</a> 分享链接，或自己打开答卷提交一份。</p>
+
+        <div class="collect-actions">
+            <button class="btn btn-primary">📝 去提交一份答卷</button>
+            <button class="btn btn-outline">📊 汇总统计分析</button>
+            <button class="btn btn-outline">🗑️ 清空本组重做</button>
+        </div>
+
+        <div style="font-weight:600; font-size:14px; margin:16px 0 8px 0;">📥 导出数据码（发给同学 / 作业截止时）</div>
+        <div class="data-input-group">
+            <textarea readonly id="dataCode">eyJhbGciOiJ...</textarea>
+            <button class="btn btn-primary">⬇ 导入并合并</button>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <button class="btn btn-outline btn-sm" onclick="copyDataCode()">复制数据码</button>
+            <span style="font-size:12px; color:var(--text-dim);">📥 导入他人回传的数据码</span>
+        </div>
+        <div class="collect-hint">
+            真实场景：把站点部署到服务器后，同学扫码进入答题页，填学号作答并提交，样本自动计入；离线状态可用数据码互相回传汇总。
+        </div>
+    </div>
+
+    <!-- 模块5：结论与解读 -->
+    <div class="section-title"><span>5</span> 结论与解读 <span class="title-hint">先做出预测，再看结论</span></div>
+    <div class="conclusion-card">
+        <div class="warning-banner" id="conclusionBanner" style="background:var(--blue-bg); color:var(--primary-blue); border-color:rgba(74,158,255,0.2);">
+            📊 样本不足，暂不下结论，继续收集数据后自动给出结论。
+        </div>
+
+        <div class="conclusion-data-grid">
+            <div class="col">
+                <div class="col-label">本次实测 A</div>
+                <div class="col-value" id="c-a">0 %</div>
+                <div class="col-sub" id="c-a-n">n=0</div>
+            </div>
+            <div class="col">
+                <div class="col-label">本次实测 B</div>
+                <div class="col-value" id="c-b">0 %</div>
+                <div class="col-sub" id="c-b-n">n=0</div>
+            </div>
+            <div class="col">
+                <div class="col-label">总体参考值 A</div>
+                <div class="col-value">0 %</div>
+                <div class="col-sub">教学设定</div>
+            </div>
+            <div class="col">
+                <div class="col-label">总体参考值 B</div>
+                <div class="col-value">0 %</div>
+                <div class="col-sub">教学设定</div>
+            </div>
+            <div class="col">
+                <div class="col-label">参考提升幅度</div>
+                <div class="col-value" id="c-lift">0 %</div>
+                <div class="col-sub"></div>
+            </div>
+            <div class="col">
+                <div class="col-label">建议样本量</div>
+                <div class="col-value">486 / 组</div>
+                <div class="col-sub"></div>
+            </div>
+        </div>
+
+        <div style="font-size:12px; color:var(--text-dim); background:var(--bg-card); border:1px solid var(--border-color); padding:10px 12px; border-radius:6px; margin-top:12px; line-height:1.7;">
+            ⚠️ 总体参考值已做脱敏处理：它是"答案"，本平台不会在内部测试时直接给出。等本次实验样本充足、出现显著结论后自动揭晓。现在请专注你自己的实验数据 —— 这也是真实 A/B 测试的一般性要求。
+        </div>
+
+        <div class="chart-area">
+            <div class="chart-box">
+                <div class="chart-box-title">参与人群的预测分布（参考 <span id="pred-total">68</span> 人）</div>
+                <div class="donut-chart" id="donutChart" data-center="68&#10;参考人数"></div>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-dot" style="background:var(--primary-blue);"></div> 预测 A 版 <span id="pred-a-count">29</span> (<span id="pred-a-pct">42.6</span>%)</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:var(--primary-orange);"></div> 预测 B 版 <span id="pred-b-count">39</span> (<span id="pred-b-pct">57.4</span>%)</div>
+                </div>
+            </div>
+
+            <div class="chart-box" style="align-items: stretch;">
+                <div class="chart-box-title">我的判断与结论对照</div>
+                <table class="prediction-table">
+                    <tr><td>我的预测</td><td id="p-my-pred">未预测</td></tr>
+                    <tr><td>实际胜出方</td><td id="p-winner">数据不足</td></tr>
+                    <tr><td>判定</td><td><span class="badge badge-pending" id="p-verdict">⏳ 待定</span></td></tr>
+                    <tr><td>是否"爆大冷"</td><td id="p-cold">—</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="business-reading" id="businessReading">
+            <strong>业务解读（教学参考）</strong><br>
+            B 版本完成率提升 17.0%。开学是家庭决策，晚间家长在场，长文能读完并触发家庭讨论 —— 尤其涉及学费这类需要商量的内容。<br>
+            <span style="color:var(--warning-text);">⚠️ 方法提示：时间类实验必须跑满 7 天以上，避开单日偶发因素（如周末、模考日），并固定内容只变时间这一个变量。</span>
+        </div>
+
+        <div style="margin-top:16px;">
+            <button class="btn btn-warning">🔍 生成科学报告（可导出）</button>
+        </div>
+    </div>
+
+    <!-- 底部导航 -->
+    <div class="footer-nav">
+        <div>← 返回 P1 列表</div>
+        <div style="display:flex; gap:16px; align-items:center;">
+            <a href="#">P1-07</a>
+            <span style="font-weight:600; color:var(--text-main);">P1-08</span>
+            <a href="#">汇总统计分析 →</a>
+        </div>
+    </div>
+    <div class="footer-copy">
+        网络营销 A/B 实验平台 · 浙江科技学院 · 教学实训
+    </div>
+</div>
+
+<script>
+    /* ================= 全局状态 ================= */
+    let userPrediction = null; // 'A' 或 'B' 或 null
+
+    /* ================= 工具函数 ================= */
+    // 生成 [min, max] 之间的随机整数
+    function randInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    // 生成 [min, max] 之间的随机浮点数，保留 digits 位小数
+    function randFloat(min, max, digits = 1) {
+        return parseFloat((Math.random() * (max - min) + min).toFixed(digits));
+    }
+
+    // 简单的正态分布近似（Box-Muller）
+    function randNormal(mean, std) {
+        let u = 0, v = 0;
+        while (u === 0) u = Math.random();
+        while (v === 0) v = Math.random();
+        return mean + std * Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    }
+
+    /* ================= 交互：选择 A/B 方案 ================= */
+    function selectPlan(plan) {
+        const planA = document.getElementById('planA');
+        const planB = document.getElementById('planB');
+        if (plan === 'A') {
+            planA.classList.add('active-a');
+            planB.classList.remove('active-b');
+        } else {
+            planB.classList.add('active-b');
+            planA.classList.remove('active-a');
+        }
+        userPrediction = plan;
+        updatePredictionTable();
+    }
+
+    /* ================= 交互：复制链接 ================= */
+    function copyLink() {
+        navigator.clipboard.writeText("https://dx.ksj.top/").then(() => {
+            alert('答题链接已复制到剪贴板！');
+        }).catch(() => alert('复制失败，请手动复制。'));
+    }
+
+    function copyDataCode() {
+        const code = document.getElementById('dataCode').value;
+        navigator.clipboard.writeText(code).then(() => {
+            alert('数据码已复制到剪贴板！');
+        }).catch(() => alert('复制失败，请手动复制。'));
+    }
+
+    /* ================= 核心：主动生成随机模拟数据 ================= */
+    function simulateDataUpdate() {
+        // 1. 随机样本量（60 ~ 486），B 组略多一点以模拟真实场景
+        const nA = randInt(80, 486);
+        const nB = randInt(80, 486);
+
+        // 2. 随机完成率：A 组 30%~55%，B 组 40%~70%（B 略高，符合实验假设）
+        const rateA = randFloat(30, 55, 1);
+        const rateB = randFloat(Math.min(rateA + 2, 70), Math.min(rateA + 20, 75), 1);
+
+        // 3. 计算差值与相对提升
+        const diff = parseFloat((rateB - rateA).toFixed(1));
+        const rel = parseFloat(((diff / rateA) * 100).toFixed(1));
+
+        // 4. 随机 P 值：差异大时 P 值小（模拟显著性）
+        let pValue;
+        if (diff > 10) {
+            pValue = randFloat(0.001, 0.03, 3);
+        } else if (diff > 5) {
+            pValue = randFloat(0.03, 0.09, 3);
+        } else {
+            pValue = randFloat(0.1, 0.9, 3);
+        }
+
+        // 5. 置信区间（基于差值 ± 1.96 * 标准误，这里用随机波动模拟）
+        const ciHalf = randFloat(3, 12, 1);
+        const ciLower = parseFloat((diff - ciHalf).toFixed(1));
+        const ciUpper = parseFloat((diff + ciHalf).toFixed(1));
+
+        // 6. 是否显著（P < 0.05 且 CI 不跨 0）
+        const isSignificant = pValue < 0.05 && ciLower > 0;
+
+        /* ========== 渲染模块2：实时实验数据 ========== */
+        document.getElementById('d-a-rate').textContent = rateA + ' %';
+        document.getElementById('d-a-n').textContent = '样本 ' + nA;
+        document.getElementById('d-b-rate').textContent = rateB + ' %';
+        document.getElementById('d-b-n').textContent = '样本 ' + nB;
+        document.getElementById('d-diff').textContent = (diff >= 0 ? '+' : '') + diff + ' %';
+        document.getElementById('d-rel').textContent = (rel >= 0 ? '+' : '') + rel + ' %';
+        document.getElementById('d-p').textContent = pValue;
+        document.getElementById('d-ci').textContent = '[' + ciLower + ', ' + ciUpper + ']';
+
+        // 顶部提示条
+        const dataBanner = document.getElementById('dataBanner');
+        if (isSignificant) {
+            dataBanner.style.background = 'var(--green-bg)';
+            dataBanner.style.color = 'var(--success-green)';
+            dataBanner.style.borderColor = 'rgba(52,211,153,0.2)';
+            dataBanner.innerHTML = '✅ 数据已充足，检测到显著差异（P=' + pValue + ' < 0.05）';
+        } else {
+            dataBanner.style.background = 'var(--yellow-bg)';
+            dataBanner.style.color = 'var(--warning-text)';
+            dataBanner.style.borderColor = 'rgba(251,191,36,0.2)';
+            dataBanner.innerHTML = '⏳ 数据收集中，样本量不足，需继续收集';
+        }
+
+        // 样本进度提示
+        document.getElementById('dataHint').innerHTML =
+            '样本量进度（每组需 486 人，当前 A ' + nA + ' / B ' + nB + '）<br>' +
+            (nA >= 486 && nB >= 486
+                ? '两组样本量均已达标，可进入结论分析阶段。'
+                : '样本量尚未达标，建议继续收集数据。');
+
+        /* ========== 渲染模块4：数据收集 ========== */
+        const totalSamples = nA + nB;
+        document.getElementById('collect-samples').textContent = nA + ' / ' + nB;
+        document.getElementById('collect-count').textContent = totalSamples;
+
+        /* ========== 渲染模块5：结论与解读 ========== */
+        document.getElementById('c-a').textContent = rateA + ' %';
+        document.getElementById('c-a-n').textContent = 'n=' + nA;
+        document.getElementById('c-b').textContent = rateB + ' %';
+        document.getElementById('c-b-n').textContent = 'n=' + nB;
+        document.getElementById('c-lift').textContent = (rel >= 0 ? '+' : '') + rel + ' %';
+
+        // 结论提示条
+        const conclusionBanner = document.getElementById('conclusionBanner');
+        if (isSignificant) {
+            conclusionBanner.style.background = 'var(--green-bg)';
+            conclusionBanner.style.color = 'var(--success-green)';
+            conclusionBanner.style.borderColor = 'rgba(52,211,153,0.2)';
+            conclusionBanner.innerHTML = '✅ 样本充足且差异显著，B 版胜出（完成率提升 ' + rel + '%）';
+        } else if (nA >= 486 && nB >= 486) {
+            conclusionBanner.style.background = 'var(--blue-bg)';
+            conclusionBanner.style.color = 'var(--primary-blue)';
+            conclusionBanner.innerHTML = '📊 样本量已达标，但差异不显著，暂无法判定胜出方。';
+        } else {
+            conclusionBanner.style.background = 'var(--blue-bg)';
+            conclusionBanner.style.color = 'var(--primary-blue)';
+            conclusionBanner.innerHTML = '📊 样本不足，暂不下结论，继续收集数据后自动给出结论。';
+        }
+
+        /* ========== 渲染预测分布环图 ========== */
+        const predTotal = randInt(50, 120);
+        const predB = randInt(Math.floor(predTotal * 0.4), Math.floor(predTotal * 0.75));
+        const predA = predTotal - predB;
+        const predAPct = ((predA / predTotal) * 100).toFixed(1);
+        const predBPct = ((predB / predTotal) * 100).toFixed(1);
+
+        const donut = document.getElementById('donutChart');
+        donut.style.background = `conic-gradient(
+            var(--primary-orange) 0% ${predBPct}%,
+            var(--primary-blue) ${predBPct}% 100%
+        )`;
+        donut.setAttribute('data-center', predTotal + '\n参考人数');
+
+        document.getElementById('pred-total').textContent = predTotal;
+        document.getElementById('pred-a-count').textContent = predA;
+        document.getElementById('pred-a-pct').textContent = predAPct;
+        document.getElementById('pred-b-count').textContent = predB;
+        document.getElementById('pred-b-pct').textContent = predBPct;
+
+        /* ========== 渲染判断与结论对照 ========== */
+        updatePredictionTable(isSignificant, rateB > rateA ? 'B' : 'A', rel);
+
+        /* ========== 业务解读动态更新 ========== */
+        const reading = document.getElementById('businessReading');
+        if (isSignificant && rateB > rateA) {
+            reading.innerHTML =
+                '<strong>业务解读（教学参考）</strong><br>' +
+                'B 版本完成率提升 ' + rel + '%。开学是家庭决策，晚间家长在场，长文能读完并触发家庭讨论 —— 尤其涉及学费这类需要商量的内容。<br>' +
+                '<span style="color:var(--warning-text);">⚠️ 方法提示：时间类实验必须跑满 7 天以上，避开单日偶发因素（如周末、模考日），并固定内容只变时间这一个变量。</span>';
+        } else if (isSignificant && rateA > rateB) {
+            reading.innerHTML =
+                '<strong>业务解读（教学参考）</strong><br>' +
+                'A 版本完成率反而高出 ' + Math.abs(rel) + '%。上午碎片化时间反而更适合短平快的推送内容，晚间用户注意力被其他场景分散。<br>' +
+                '<span style="color:var(--warning-text);">⚠️ 方法提示：出现与假设相反的结论时，需排查埋点口径、样本分流是否均匀（SRM 检验）。</span>';
+        } else {
+            reading.innerHTML =
+                '<strong>业务解读（教学参考）</strong><br>' +
+                '当前数据未检测到显著差异，可能原因：样本量不足、效果本身微弱、或实验周期未覆盖完整业务周期。<br>' +
+                '<span style="color:var(--warning-text);">⚠️ 方法提示：时间类实验必须跑满 7 天以上，避开单日偶发因素（如周末、模考日），并固定内容只变时间这一个变量。</span>';
+        }
+    }
+
+    /* ================= 更新判断对照表 ================= */
+    function updatePredictionTable(isSignificant, winner, rel) {
+        const myPredEl = document.getElementById('p-my-pred');
+        const winnerEl = document.getElementById('p-winner');
+        const verdictEl = document.getElementById('p-verdict');
+        const coldEl = document.getElementById('p-cold');
+
+        myPredEl.textContent = userPrediction ? ('预测 ' + userPrediction + ' 版胜出') : '未预测';
+
+        if (isSignificant) {
+            winnerEl.textContent = winner + ' 版胜出';
+            if (userPrediction === winner) {
+                verdictEl.className = 'badge badge-success';
+                verdictEl.textContent = '✅ 预测正确';
+                coldEl.textContent = '—';
+            } else if (userPrediction) {
+                verdictEl.className = 'badge badge-pending';
+                verdictEl.textContent = '❌ 预测错误';
+                coldEl.textContent = '是（与多数人直觉相反）';
+            } else {
+                verdictEl.className = 'badge badge-blue';
+                verdictEl.textContent = '未参与预测';
+                coldEl.textContent = '—';
+            }
+        } else {
+            winnerEl.textContent = '数据不足';
+            verdictEl.className = 'badge badge-pending';
+            verdictEl.textContent = '⏳ 待定';
+            coldEl.textContent = '—';
+        }
+    }
+
+    /* ================= 页面加载：自动生成一组随机数据 ================= */
+    window.addEventListener('DOMContentLoaded', () => {
+        simulateDataUpdate();
+    });
+</script>
+
+</body>
+</html>
